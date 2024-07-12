@@ -24,15 +24,15 @@ export default async (fastify, options) => {
             } catch (error) {
                 return
             }
+            if (data?.data && !data.data.encoding) {
+                data.data.encoding = 'base64'
+            }
             switch (data.action) {
                 case 'heartbeat':
                     return // socket.send(JSON.stringify({ type: 'heartbeat', message: 'pone' }))
                 case 'render': {
                     data.data.file = decodeURIComponent(data.data.file)
                     let res
-                    if (!data.data.encoding) {
-                        data.data.encoding = 'base64'
-                    }
                     if (data.data.vue) {
                         const cacheId = vueCache.addCache(data.data.file, data.data.name, data.data.props)
                         data.data.file = `http://localhost:${options.port}/vue/${data.data.vueTemplate || 'default'}/?id=${cacheId}`
@@ -43,6 +43,10 @@ export default async (fastify, options) => {
                     }
                     res.echo = data.echo
                     res.action = 'renderRes'
+                    res.ok = res.status === 'ok'
+                    if (data.data.encoding == 'base64') {
+                        res.data = 'base64://' + res.data
+                    }
                     socket.send(JSON.stringify(res))
                     break
                 }
@@ -56,6 +60,10 @@ export default async (fastify, options) => {
                     const res = await chrome.start(data.data)
                     res.echo = data.echo
                     res.action = 'renderRes'
+                    res.ok = res.status === 'ok'
+                    if (data.data.encoding == 'base64') {
+                        res.data = 'base64://' + res.data
+                    }
                     socket.send(JSON.stringify(res))
                     break
                 }
@@ -88,7 +96,11 @@ export default async (fastify, options) => {
         if (data.vue) {
             const cacheId = vueCache.addCache(data.file, data.name, data.props)
             data.file = `http://localhost:${options.port}/vue/${data.vueTemplate || 'default'}/?id=${cacheId}`
-            const image = await chrome.start(data)
+            let image = await chrome.start(data)
+            image.ok = image.status === 'ok'
+            if (data.encoding == 'base64') {
+                image.data = 'base64://' + image.data
+            }
             vueCache.deleteCache(cacheId)
             reply.send(image)
         } else {
@@ -96,6 +108,10 @@ export default async (fastify, options) => {
                 return reply.code(403).send({ code: 403, msg: 'Token错误' })
             }
             const image = await chrome.start(data)
+            image.ok = image.status === 'ok'
+            if (data.encoding == 'base64') {
+                image.data = 'base64://' + image.data
+            }
             reply.send(image)
         }
     })
