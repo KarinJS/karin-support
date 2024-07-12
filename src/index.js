@@ -37,7 +37,7 @@ fs.readdirSync(path.resolve('./src/vueTemplate')).forEach(async dir => {
 })
 // 注册路由
 await fastify.register(autoLoad, {
-    dir: path.resolve('./src/plugin'),
+    dir: path.resolve('src/plugin'),
     dirNameRoutePrefix: true,
     maxDepth: 1,
     options: { port, token, debug }

@@ -11,11 +11,11 @@ export default async (fastify, options) => {
         devtools: false,
         dir: process.cwd(),
         browserCount: 10
-      })
-      
-      await chrome.init()
+    })
 
-    await fastify.get('/ws/render', { websocket: true }, (connection, req) => {
+    await chrome.init()
+
+    fastify.get('/ws/render', { websocket: true }, (connection, req) => {
         const socket = connection
         // 处理接收到的消息
         socket.on('message', async data => {
@@ -68,7 +68,7 @@ export default async (fastify, options) => {
             }
         })
     })
-    await fastify.get('/api/render/', async (request, reply) => {
+    fastify.get('/api/render/', async (request, reply) => {
         try {
             const { hash } = request.query
             reply.setHeader('Content-Type', 'text/html; charset=utf-8')
@@ -79,7 +79,7 @@ export default async (fastify, options) => {
             reply.code(500).send({ code: 500, msg: 'Internal Server Error' })
         }
     })
-    await fastify.post('/api/render', async (request, reply) => {
+    fastify.post('/api/render', async (request, reply) => {
         const token = request.headers.authorization
         const data = request.body
         if (!data.encoding) {
@@ -99,7 +99,7 @@ export default async (fastify, options) => {
             reply.send(image)
         }
     })
-    await fastify.post('/vue/getTemplate', async (request, reply) => {
+    fastify.post('/vue/getTemplate', async (request, reply) => {
         const data = request.body
         if (data.id) {
             const vue = vueCache.getCache(data.id)
