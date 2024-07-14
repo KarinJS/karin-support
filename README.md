@@ -8,7 +8,6 @@ KarinSupport用于提供一站式Karin服务支持
 [√] Puppeteer
 [×] Silk
 [√] Wormhole
-[×] Manage
 
 ## Puppeteer
 Puppeteer使用karin-screenshot库，基于puppeteer-core 22.10.0版本。

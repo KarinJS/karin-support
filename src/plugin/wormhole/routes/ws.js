@@ -8,7 +8,7 @@ export default async function webRoutes(fastify, options) {
 
 
   // 处理客户端Ws请求
-  await fastify.get('/:clientId/*', { websocket: true }, async (connection, request) => {
+  fastify.get('/:clientId/*', { websocket: true }, async (connection, request) => {
     const clientId = parseInt(request.params.clientId)
     let path = request.params['*']
     const queryParams = request.query
@@ -32,7 +32,7 @@ export default async function webRoutes(fastify, options) {
       }
     }
     const closeHandler = error => {
-      connection.send(JSON.stringify({message: 'close'}))
+      connection.send(JSON.stringify({ message: 'close' }))
       connection.close()
     }
 

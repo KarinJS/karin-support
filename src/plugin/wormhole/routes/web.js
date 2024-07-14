@@ -8,7 +8,7 @@ export default async function webRoutes(fastify, options) {
   const { clientManager, webDataStore } = options.options
 
   // 处理客户端Get请求
-  await fastify.get('/:clientId/*', async (request, reply) => {
+  fastify.get('/:clientId/*', async (request, reply) => {
     const clientId = parseInt(request.params.clientId)
     const path = request.params['*']
     const queryParams = request.query
@@ -30,7 +30,7 @@ export default async function webRoutes(fastify, options) {
   })
 
   // 处理客户端api请求
-  await fastify.post('/:clientId/*', async (request, reply) => {
+  fastify.post('/:clientId/*', async (request, reply) => {
     const clientId = parseInt(request.params.clientId)
     const path = request.params['*']
     const queryParams = request.query

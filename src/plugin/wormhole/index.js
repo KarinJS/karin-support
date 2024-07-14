@@ -8,12 +8,12 @@ import wsRoutes from './routes/ws.js'
 export default async (fastify, options) => {
   const clientManager = new ClientManager()
   const webDataStore = new WebDataStore()
-  options.options = {
+  options = {
+    ...options,
     clientManager,
     webDataStore
   }
-  await fastify.register(websocketRoutes, { prefix: '/ws', options })
-  await fastify.register(webRoutes, { prefix: '/web', options })
-  await fastify.register(wsRoutes, { prefix: '/websocket', options })
-  console.log('启动wormhole')
+  fastify.register(websocketRoutes, { prefix: '/ws', options })
+  fastify.register(webRoutes, { prefix: '/web', options })
+  fastify.register(wsRoutes, { prefix: '/websocket', options })
 }

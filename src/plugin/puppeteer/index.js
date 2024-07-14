@@ -1,19 +1,8 @@
 import VueCache from './VueFileCache.js'
-import { Core } from 'karin-screenshot'
 
 export default async (fastify, options) => {
     const vueCache = VueCache
     const files = new Map()
-
-    const chrome = new Core({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true,
-        devtools: false,
-        dir: process.cwd(),
-        browserCount: 10
-    })
-
-    await chrome.init()
 
     fastify.get('/ws/render', { websocket: true }, (connection, req) => {
         const socket = connection
@@ -27,6 +16,9 @@ export default async (fastify, options) => {
             if (data?.data && !data.data.encoding) {
                 data.data.encoding = 'base64'
             }
+            if (data.screensEval) {
+                data.waitForSelector = data.screensEval
+            }
             switch (data.action) {
                 case 'heartbeat':
                     return // socket.send(JSON.stringify({ type: 'heartbeat', message: 'pone' }))
@@ -35,11 +27,12 @@ export default async (fastify, options) => {
                     let res
                     if (data.data.vue) {
                         const cacheId = vueCache.addCache(data.data.file, data.data.name, data.data.props)
-                        data.data.file = `http://localhost:${options.port}/vue/${data.data.vueTemplate || 'default'}/?id=${cacheId}`
-                        res = await chrome.start(data.data)
+                        data.data.file = `http://localhost:${options.port}/vue/${data.data.vueTemplate || 'default'}/?id=${cacheId}&support=true`
+                        data.data.waitForFunction = 'window.$vueReady'
+                        res = await options.chrome.start(data.data)
                         vueCache.deleteCache(cacheId)
                     } else {
-                        res = await chrome.start(data.data)
+                        res = await options.chrome.start(data.data)
                     }
                     res.echo = data.echo
                     res.action = 'renderRes'
@@ -53,11 +46,11 @@ export default async (fastify, options) => {
                 case 'renderHtml': {
                     const file = decodeURIComponent(data.data.file)
                     const hash = `render-${crypto.randomUUID()}`
-                    const host = `http://localhost:${port}/api/render?hash=${hash}`
+                    const host = `http://localhost:${options.port}/api/render?hash=${hash}`
                     http.file.set(hash, { ws: this, file })
                     data.data.file = host
                     data.data.hash = hash
-                    const res = await chrome.start(data.data)
+                    const res = await options.chrome.start(data.data)
                     res.echo = data.echo
                     res.action = 'renderRes'
                     res.ok = res.status === 'ok'
@@ -93,10 +86,14 @@ export default async (fastify, options) => {
         if (!data.encoding) {
             data.encoding = 'base64'
         }
+        if (data.screensEval) {
+            data.waitForSelector = data.screensEval
+        }
         if (data.vue) {
             const cacheId = vueCache.addCache(data.file, data.name, data.props)
-            data.file = `http://localhost:${options.port}/vue/${data.vueTemplate || 'default'}/?id=${cacheId}`
-            let image = await chrome.start(data)
+            data.file = `http://localhost:${options.port}/vue/${data.vueTemplate || 'default'}/?id=${cacheId}&support=true`
+            data.waitForFunction = 'window.$vueReady'
+            let image = await options.chrome.start(data)
             image.ok = image.status === 'ok'
             if (data.encoding == 'base64') {
                 image.data = 'base64://' + image.data
@@ -107,7 +104,7 @@ export default async (fastify, options) => {
             if (token !== options.token) {
                 return reply.code(403).send({ code: 403, msg: 'Token错误' })
             }
-            const image = await chrome.start(data)
+            const image = await options.chrome.start(data)
             image.ok = image.status === 'ok'
             if (data.encoding == 'base64') {
                 image.data = 'base64://' + image.data
@@ -115,7 +112,7 @@ export default async (fastify, options) => {
             reply.send(image)
         }
     })
-    fastify.post('/vue/getTemplate', async (request, reply) => {
+    fastify.post('/getTemplate', async (request, reply) => {
         const data = request.body
         if (data.id) {
             const vue = vueCache.getCache(data.id)
