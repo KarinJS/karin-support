@@ -25,9 +25,9 @@ await chrome.init()
 // 创建Fastify实例
 const fastify = Fastify({ logger: debug })
 // 注册WebSocket插件
-await fastify.register(websocketPlugin)
+fastify.register(websocketPlugin)
 // 配置跨域请求
-await fastify.register(cors, {
+fastify.register(cors, {
     origin: '*',
     methods: ['GET', 'POST']
 })
@@ -35,7 +35,7 @@ await fastify.register(cors, {
 fs.readdirSync(path.resolve('./src/vueTemplate')).forEach(async dir => {
     const subdirPath = path.resolve(path.join('./src/vueTemplate', dir))
     if (fs.statSync(subdirPath).isDirectory()) {
-        await fastify.register(fastifyStatic, {
+        fastify.register(fastifyStatic, {
             root: subdirPath,
             prefix: `/vue/${dir}`,
             decorateReply: (reply, request) => {
@@ -47,11 +47,50 @@ fs.readdirSync(path.resolve('./src/vueTemplate')).forEach(async dir => {
     }
 })
 // 注册路由
-await fastify.register(autoLoad, {
+fastify.register(autoLoad, {
     dir: path.resolve('src/plugin'),
     dirNameRoutePrefix: true,
     maxDepth: 1,
     options: { port, token, debug, chrome }
+})
+// 重定向资源
+fastify.setNotFoundHandler((request, reply) => {
+    if (!request.url.startsWith('/puppeteer')) {
+        return reply.redirect('/puppeteer/resources' + request.url)
+    } else {
+        reply.from(404)
+    }
+})
+// 主页
+fastify.get('/', async (request, reply) => {
+    reply.header('Content-Type', 'text/html')
+    reply.send(`
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KarinSupport API 服务启动提示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Karin Support API 服务已启动</h1>
+</body>
+</html>
+`)
 })
 // 启动fastify服务
 fastify.listen({ port: port || 3000, host: '::' })

@@ -1,12 +1,13 @@
 {
   "name": "karin-support",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Support services for the Karin project",
   "main": "src/index.js",
   "type": "module",
   "author": "Alcedo",
   "scripts": {
     "app": "node .",
+    "debug": "set DEBUG=true & node .",
     "init": "node src/init.js",
     "build": "docker build -t karin-support ."
   },

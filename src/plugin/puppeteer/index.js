@@ -1,3 +1,6 @@
+import fs from 'fs'
+import path from 'path'
+import util from 'util'
 import VueCache from './VueFileCache.js'
 
 export default async (fastify, options) => {
@@ -46,8 +49,8 @@ export default async (fastify, options) => {
                 case 'renderHtml': {
                     const file = decodeURIComponent(data.data.file)
                     const hash = `render-${crypto.randomUUID()}`
-                    const host = `http://localhost:${options.port}/api/render?hash=${hash}`
-                    http.file.set(hash, { ws: this, file })
+                    const host = `http://localhost:${options.port}/puppeteer/api/render?hash=${hash}`
+                    files.set(hash, { ws: socket, file })
                     data.data.file = host
                     data.data.hash = hash
                     const res = await options.chrome.start(data.data)
@@ -69,10 +72,10 @@ export default async (fastify, options) => {
             }
         })
     })
-    fastify.get('/api/render/', async (request, reply) => {
+    fastify.get('/api/render', async (request, reply) => {
         try {
             const { hash } = request.query
-            reply.setHeader('Content-Type', 'text/html; charset=utf-8')
+            reply.header('Content-Type', 'text/html; charset=utf-8')
             const data = files.get(hash)
             if (!data) return reply.code(500).send({ code: 404, msg: 'Not Found' })
             reply.send(data.file)
@@ -125,4 +128,62 @@ export default async (fastify, options) => {
             reply.code(500).send({ code: 500, status: 'failed', msg: 'Vue cache is not found' })
         }
     })
+
+    // 处理静态资源请求
+    fastify.get('/resources/*', async (request, reply) => {
+        if (request.query.hash) return reply.code(404).send({ message: `Resources GET:${request.url} not found`, error: "Not Found", statusCode: 404 })
+
+        // 获取唯一id
+        const hash = request.headers['x-renderer-id'] || request.headers.referer?.match(/hash=([^&]+)/)?.[1] || request.headers.referer?.match(/hash=([^&]+)/)?.[1];
+        if (!hash) return reply.code(404).send({ message: `Resources GET:${request.url} not found`, error: "Not Found", statusCode: 404 })
+
+        // 如果是/favicon.ico 则返回本地
+        if (request.url === '/favicon.ico') {
+            const file = fs.readFileSync('./src/resources/favicon.ico')
+            reply.header('Content-Type', 'image/x-icon')
+            return reply.send(file)
+        }
+
+        // 获取对应的ws
+        const file = files.get(hash)
+        if (!file || !file.ws) return reply.code(404).send({ message: `Resources GET:${request.url} not found`, error: "Not Found", statusCode: 404 })
+
+        const SendApi = async (ws, action, params) => {
+            const time = 120
+            const echo = crypto.randomUUID()
+            const request = JSON.stringify({ echo, action, params })
+            return new Promise((resolve, reject) => {
+                ws.send(request)
+                ws.once(echo, (data) => {
+                    if (data.status === 'ok') {
+                        resolve(data.data)
+                    } else {
+                        reject(data)
+                    }
+                })
+                setTimeout(() => {
+                    reject(new Error('API请求超时'))
+                }, time * 1000)
+            })
+        }
+
+        const url = request.url.replace(/^\/puppeteer\/resources/, "");
+        // 发送请求
+        let data = SendApi(file.ws, 'static', { file: url })
+
+        // 获取url后缀
+        const ext = path.extname(url).toLowerCase()
+        let contentType = 'application/octet-stream'
+
+        try {
+            contentType = Config.mime[ext]
+        } catch {
+            console.error('[服务器][GET][ContentType] 获取 mime 错误')
+        }
+
+        if (util.types.isPromise(data)) data = await data
+        reply.header('Content-Type', contentType)
+        reply.send(Buffer.from(data.file.data))
+    })
+
 }
