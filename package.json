@@ -1,6 +1,6 @@
 {
   "name": "karin-support",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Support services for the Karin project",
   "main": "src/index.js",
   "type": "module",
@@ -19,8 +19,9 @@
     "@fastify/static": "^7.0.4",
     "@fastify/websocket": "^10.0.1",
     "fastify": "^4.28.1",
-    "karin-screenshot": "^1.0.2",
+    "karin-screenshot": "^1.0.3",
     "log4js": "^6.9.1",
+    "node-cache": "^5.1.2",
     "ws": "^8.18.0",
     "yaml": "^2.4.5"
   }

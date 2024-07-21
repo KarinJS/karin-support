@@ -5,7 +5,7 @@ import fastifyStatic from '@fastify/static'
 import autoLoad from '@fastify/autoload'
 import middie from '@fastify/middie'
 import { Core } from 'karin-screenshot'
-import resources from './plugin/puppeteer/resources.js'
+import resources from './common/resources.js'
 import path from 'path'
 import util from 'util'
 import fs from 'fs'
@@ -62,6 +62,13 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     const hash = request.headers['x-renderer-id'] || request.headers.referer?.match(/hash=([^&]+)/)?.[1] || request.headers.referer?.match(/hash=([^&]+)/)?.[1]
     if (!hash) return next()
     const url = request.originalUrl
+    // 读取缓存
+    const cachedResource = resources.cache.get(url)
+    if (cachedResource) {
+        res.setHeader('Content-Type', cachedResource.contentType)
+        res.end(cachedResource.data)
+        return next()
+    }
     // 如果是/favicon.ico 则返回本地
     if (url === '/favicon.ico') {
         const file = fs.readFileSync('./resources/favicon.ico')
@@ -130,6 +137,13 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     } catch {
         return next()
     }
+    // 缓存静态文件
+    resources.cache.set(url, {
+        url,
+        hash,
+        contentType,
+        data: Buffer.from(data.file.data)
+    })
     res.setHeader('Content-Type', contentType)
     res.end(Buffer.from(data.file.data))
     next()
@@ -146,10 +160,69 @@ fastify.get('/', async (request, reply) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KarinSupport API 服务启动提示</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f0f0f0; text-align: center; padding: 50px; }
-        h1 { color: #333; } p { color: #666; } ul { list-style: none; padding: 0; } li { margin-bottom: 10px; }
-        .copy-button { background-color: #007bff; color: #fff; border: none; padding: 5px 10px; cursor: pointer;}
-        .api { border-radius: 5px; margin-right: 5px; } .get-api {  background-color: #229954; } .post-api { background-color: #FFC300; } .ws-api { background-color: #33FFF4; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #6c757d;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .api {
+            border-radius: 5px;
+            padding: 5px 10px;
+            color: #fff;
+            margin-right: 10px;
+        }
+        .get-api {
+            background-color: #28a745;
+        }
+        .post-api {
+            background-color: #ffc107;
+        }
+        .ws-api {
+            background-color: #17a2b8;
+        }
+        .copy-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+        }
+        .copy-success {
+            display: none;
+            color: #28a745;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -157,30 +230,103 @@ fastify.get('/', async (request, reply) => {
     <h2>Puppeteer</h2>
     <ul>
         <li>
-            <strong class="ws-api api">WS</strong><strong>websocket 渲染器:</strong> /puppeteer/ws/render
-            <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/ws/render\`)">复制</button>
-            <span class="copy-success" id="copy-success-1"></span>
+            <div>
+                <strong class="ws-api api">WS</strong><strong>websocket 渲染器:</strong> /puppeteer/ws/render
+            </div>
+            <div>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/ws/render\`)">复制</button>
+                <span class="copy-success" id="copy-success-1">已复制</span>
+            </div>
         </li>
         <li>
-            <strong class="get-api api">GET</strong><strong class="post-api">POST</strong><strong>http 渲染器:</strong> /puppeteer/ws/render
-            <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/api/render\`)">复制</button>
-            <span class="copy-success" id="copy-success-2"></span>
+            <div>
+                <strong class="get-api api">GET</strong><strong class="post-api api">POST</strong><strong>http 渲染器:</strong> /puppeteer/ws/render
+            </div>
+            <div>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/api/render\`)">复制</button>
+                <span class="copy-success" id="copy-success-2">已复制</span>
+            </div>
         </li>
     </ul>
     <h2>Wormhole</h2>
     <ul>
         <li>
-            <strong class="ws-api api">WS</strong><strong>客户端连接</strong> /wormhole/ws/:clientId
-            <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/wormhole/ws/\`)">复制</button>
-            <span class="copy-success" id="copy-success-1"></span>
+            <div>
+                <strong class="ws-api api">WS</strong><strong>客户端连接:</strong> /wormhole/ws/:clientId
+            </div>
+            <div>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/wormhole/ws/\`)">复制</button>
+                <span class="copy-success" id="copy-success-3">已复制</span>
+            </div>
         </li>
     </ul>
     <script>
-        function copyToClipboard(text) { const tempInput = document.createElement('input'); tempInput.value = text; document.body.appendChild(tempInput); tempInput.select(); document.execCommand('copy'); document.body.removeChild(tempInput); alert(\`API \${text} 已复制到剪贴板！\`); }
+        function copyToClipboard(text) {
+            const tempInput = document.createElement('input');
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            alert(\`API \${text} 已复制到剪贴板！\`);
+        }
     </script>
 </body>
 </html>
 `)
+})
+// 缓存信息
+fastify.get('/cache', async (request, reply) => {
+    let rows = '';
+    resources.cache.keys().forEach(item => {
+        rows += `
+            <tr>
+                <td>${item}</td>
+            </tr>
+        `;
+    });
+    reply.header('Content-Type', 'text/html')
+    reply.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>缓存文件列表</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 10px;
+                border: 1px solid #ddd;
+                text-align: left;
+            }
+            th {
+                background-color: #f4f4f4;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>缓存文件列表</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>文件路径</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `)
 })
 // 启动fastify服务
 fastify.listen({ port: port || 3000, host: '::' })

@@ -1,6 +1,9 @@
+import NodeCache from 'node-cache';
+
 class Resources {
     constructor() {
         this.files = new Map()
+        this.cache = new NodeCache({ stdTTL: 60 * 60 * 24, maxKeys: 1000 })
     }
 
     async SendApi(ws, action, params) {
@@ -21,5 +24,7 @@ class Resources {
             }, time * 1000)
         })
     }
+
+
 }
 export default new Resources()

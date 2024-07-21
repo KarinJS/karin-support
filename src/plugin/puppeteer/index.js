@@ -1,4 +1,4 @@
-import resources from './resources.js'
+import resources from '../../common/resources.js'
 import VueCache from './VueFileCache.js'
 
 export default async (fastify, options) => {
