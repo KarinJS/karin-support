@@ -20,7 +20,7 @@ export default async function webRoutes(fastify, options) {
       // 创建一个新的Promise来等待WebSocket客户端的响应
       const data = await getWaitForWsResponse(clientManager, webDataStore, clientId, path, queryParams, headersParams)
       if (data.code === 301 || data.code === 302) {
-        reply.redirect(data.code, data.target)
+        reply.code(data.code).redirect(data.target)
       } else {
         reply.code(data.code).type(data.type).send(data.data)
       }
@@ -42,7 +42,7 @@ export default async function webRoutes(fastify, options) {
       // 创建一个新的Promise来等待WebSocket客户端的响应
       const data = await postWaitForWsResponse(clientManager, webDataStore, clientId, path, queryParams, bodyParams, headersParams)
       if (data.code === 301 || data.code === 302) {
-        reply.redirect(data.code, data.target)
+        reply.code(data.code).redirect(data.target)
       } else {
         reply.code(data.code).type(data.type).send(data.data)
       }
@@ -95,7 +95,7 @@ export default async function webRoutes(fastify, options) {
             }
           }
           if (message.type === 'web' && message.path === path && message.command === 'redirect' && message.target) {
-            ret({ code: 301, target: `/web/${clientId}/${message.target}` })
+            ret({ code: 301, target: `/wormhole/web/${clientId}/${message.target}` })
           }
           if (message.state === 'error') {
             webDataStore.clearData(clientId, path)
@@ -147,7 +147,7 @@ export default async function webRoutes(fastify, options) {
             }
           }
           if (message.type === 'web' && message.path === path && message.command === 'redirect' && message.target) {
-            ret({ code: 301, target: `/web/${clientId}/${message.target}` })
+            ret({ code: 301, target: `/wormhole/web/${clientId}/${message.target}` })
           }
           if (message.state === 'error') {
             webDataStore.clearData(clientId, path)

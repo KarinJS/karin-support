@@ -243,7 +243,7 @@ fastify.get('/', async (request, reply) => {
                 <strong class="get-api api">GET</strong><strong class="post-api api">POST</strong><strong>http 渲染器:</strong> /puppeteer/ws/render
             </div>
             <div>
-                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/api/render\`)">复制</button>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/api/render\`)">复制</button>
                 <span class="copy-success" id="copy-success-2">已复制</span>
             </div>
         </li>
