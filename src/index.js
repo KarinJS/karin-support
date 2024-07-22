@@ -13,12 +13,12 @@ import fs from 'fs'
 const port = process.env.PORT || 7005
 const token = process.env.TOKEN || 'Karin-Puppeteer'
 const timeout = process.env.TIMEOUT || 90000
-const debug = process.env.DEBUG || false
+const debug = (process.env.DEBUG || 'false').toLowerCase() === 'true'
 
 // 初始化karin-screenshot
 const chrome = new Core({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: true,
+    headless: 'shell',
     devtools: false,
     dir: process.cwd(),
     browserCount: 10
@@ -223,6 +223,9 @@ fastify.get('/', async (request, reply) => {
             color: #28a745;
             margin-left: 10px;
         }
+        .copy-success.show {
+            display: inline;
+        }
     </style>
 </head>
 <body>
@@ -231,11 +234,20 @@ fastify.get('/', async (request, reply) => {
     <ul>
         <li>
             <div>
+                <strong class="get-api api">GET</strong><strong class="post-api api">POST</strong><strong class="ws-api api">WS</strong><strong>通用接口:</strong> /puppeteer/
+            </div>
+            <div>
+                <span class="copy-success" id="copy-success-1">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/\`, 1)">复制</button>
+            </div>
+        </li>
+        <li>
+            <div>
                 <strong class="ws-api api">WS</strong><strong>websocket 渲染器:</strong> /puppeteer/ws/render
             </div>
             <div>
-                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/ws/render\`)">复制</button>
-                <span class="copy-success" id="copy-success-1">已复制</span>
+                <span class="copy-success" id="copy-success-2">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/ws/render\`, 2)">复制</button>
             </div>
         </li>
         <li>
@@ -243,8 +255,8 @@ fastify.get('/', async (request, reply) => {
                 <strong class="get-api api">GET</strong><strong class="post-api api">POST</strong><strong>http 渲染器:</strong> /puppeteer/ws/render
             </div>
             <div>
-                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/api/render\`)">复制</button>
-                <span class="copy-success" id="copy-success-2">已复制</span>
+                <span class="copy-success" id="copy-success-3">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/puppeteer/api/render\`, 3)">复制</button>
             </div>
         </li>
     </ul>
@@ -255,20 +267,25 @@ fastify.get('/', async (request, reply) => {
                 <strong class="ws-api api">WS</strong><strong>客户端连接:</strong> /wormhole/ws/:clientId
             </div>
             <div>
-                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/wormhole/ws/\`)">复制</button>
-                <span class="copy-success" id="copy-success-3">已复制</span>
+                <span class="copy-success" id="copy-success-4">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/wormhole/ws/\`, 4)">复制</button>
             </div>
         </li>
     </ul>
     <script>
-        function copyToClipboard(text) {
+        function copyToClipboard(text, id) {
             const tempInput = document.createElement('input');
             tempInput.value = text;
             document.body.appendChild(tempInput);
             tempInput.select();
             document.execCommand('copy');
             document.body.removeChild(tempInput);
-            alert(\`API \${text} 已复制到剪贴板！\`);
+            
+            const copySuccess = document.getElementById('copy-success-' + id);
+            copySuccess.classList.add('show');
+            setTimeout(() => {
+                copySuccess.classList.remove('show');
+            }, 2000);
         }
     </script>
 </body>

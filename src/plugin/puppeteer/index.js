@@ -5,7 +5,7 @@ export default async (fastify, options) => {
     const vueCache = VueCache
     const files = resources.files
 
-    fastify.get('/ws/render', { websocket: true }, (connection, req) => {
+    const ws_render = (connection, _) => {
         const socket = connection
         // 处理接收到的消息
         socket.on('message', async data => {
@@ -69,8 +69,8 @@ export default async (fastify, options) => {
                     break
             }
         })
-    })
-    fastify.get('/api/render', async (request, reply) => {
+    }
+    const get_render = (request, reply) => {
         try {
             const { hash } = request.query
             reply.header('Content-Type', 'text/html; charset=utf-8')
@@ -80,8 +80,8 @@ export default async (fastify, options) => {
         } catch (e) {
             reply.code(500).send({ code: 500, msg: 'Internal Server Error' })
         }
-    })
-    fastify.post('/api/render', async (request, reply) => {
+    }
+    const post_render = async (request, reply) => {
         const token = request.headers.authorization
         const data = request.body
         if (!data.encoding) {
@@ -112,7 +112,11 @@ export default async (fastify, options) => {
             }
             reply.send(image)
         }
-    })
+    }
+
+    fastify.get('/ws/render', { websocket: true }, ws_render)
+    fastify.get('/api/render', get_render)
+    fastify.post('/api/render', post_render)
     fastify.post('/getTemplate', async (request, reply) => {
         const data = request.body
         if (data.id) {
@@ -126,5 +130,13 @@ export default async (fastify, options) => {
             reply.code(500).send({ code: 500, status: 'failed', msg: 'Vue cache is not found' })
         }
     })
-
+    fastify.register(async () => {
+        fastify.route({
+          method: 'GET',
+          url: '/',
+          handler: get_render,
+          wsHandler: ws_render
+        })
+      })
+    fastify.post('/', post_render)
 }

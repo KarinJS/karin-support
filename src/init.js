@@ -1,7 +1,7 @@
 import { Core } from 'karin-screenshot'
 const chrome = new Core({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: true,
+    headless: 'shell',
     devtools: false,
     dir: process.cwd(),
     browserCount: 10
