@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
     libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 \
     libxrender1 libxss1 ca-certificates fonts-liberation libnss3 lsb-release \
     fonts-ipafont-gothic fonts-wqy-zenhei fonts-freefont-ttf \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 拷贝项目文件
 COPY package.json /home/nodeRule/

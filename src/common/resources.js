@@ -6,8 +6,7 @@ class Resources {
         this.cache = new NodeCache({ stdTTL: 60 * 60 * 24, maxKeys: 1000 })
     }
 
-    async SendApi(ws, action, params) {
-        const time = 120
+    async SendApi(ws, action, params, timeout = 120000) {
         const echo = crypto.randomUUID()
         const request = JSON.stringify({ echo, action, params })
         return new Promise((resolve, reject) => {
@@ -21,10 +20,9 @@ class Resources {
             })
             setTimeout(() => {
                 reject(new Error('API请求超时'))
-            }, time * 1000)
+            }, timeout)
         })
     }
-
 
 }
 export default new Resources()

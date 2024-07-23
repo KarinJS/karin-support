@@ -17,7 +17,7 @@ KarinSupport用于提供一站式Karin服务支持
 
 ## 包含的主要功能
 - [√] Puppeteer
-- [×] Silk
+- [√] Silk
 - [√] Wormhole
 
 ## Puppeteer

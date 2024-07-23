@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import websocketPlugin from '@fastify/websocket'
 import fastifyStatic from '@fastify/static'
+import multipart from '@fastify/multipart'
 import autoLoad from '@fastify/autoload'
 import middie from '@fastify/middie'
 import { Core } from 'karin-screenshot'
@@ -26,9 +27,10 @@ const chrome = new Core({
 await chrome.init()
 
 // 创建Fastify实例
-const fastify = Fastify({ logger: debug })
-// 注册WebSocket插件
+const fastify = Fastify({ logger: debug, bodyLimit: 50 * 1024 * 1024 })
+// 注册插件
 await fastify.register(websocketPlugin)
+await fastify.register(multipart)
 await fastify.register(middie)
 // 配置跨域请求
 fastify.register(cors, {
@@ -78,7 +80,7 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     const file = resources.files.get(hash)
     if (!file || !file.ws) return next()
     // 发送请求
-    let data = resources.SendApi(file.ws, 'static', { file: url })
+    let data = resources.SendApi(file.ws, 'static', { file: url }, timeout)
 
     // 获取url后缀
     const ext = path.extname(url).toLowerCase()
@@ -269,6 +271,27 @@ fastify.get('/', async (request, reply) => {
             <div>
                 <span class="copy-success" id="copy-success-4">已复制</span>
                 <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/wormhole/ws/\`, 4)">复制</button>
+            </div>
+        </li>
+    </ul>
+    <h2>Silk</h2>
+    <ul>
+        <li>
+            <div>
+                <strong class="post-api api">POST</strong><strong>音频转码SILK:</strong> /silk/encode
+            </div>
+            <div>
+                <span class="copy-success" id="copy-success-5">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/silk/encode\`, 5)">复制</button>
+            </div>
+        </li>
+        <li>
+            <div>
+                <strong class="post-api api">POST</strong><strong>SILK转码PCM:</strong> /silk/decode
+            </div>
+            <div>
+                <span class="copy-success" id="copy-success-6">已复制</span>
+                <button class="copy-button" onclick="copyToClipboard(\`\${window.location.origin}/silk/decode\`, 6)">复制</button>
             </div>
         </li>
     </ul>
