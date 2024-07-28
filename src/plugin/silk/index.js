@@ -1,5 +1,5 @@
-import { encode, decode } from 'silk-wasm'
-import { Writable } from 'stream'
+import { encode, decode, isSilk } from 'silk-wasm'
+import { Writable, Duplex } from 'stream'
 import path from 'path'
 import ffmpeg from 'fluent-ffmpeg'
 
@@ -11,7 +11,7 @@ export default async (fastify, options) => {
             reply.header('Content-Disposition', `attachment; filename="${path.basename(file.filename, path.extname(file.filename))}.silk"`)
             reply.type('audio/silk')
             const wav = await convertToWav(inputStream)
-            const silk = await encode(wav, 24000)
+            const silk = await encode(wav, 48000)
             reply.send(silk.data)
         } catch (error) {
             console.log(error)
@@ -22,10 +22,12 @@ export default async (fastify, options) => {
         const file = await request.file()
         try {
             const inputBuffer = await file.toBuffer()
-            reply.header('Content-Disposition', `attachment; filename="${path.basename(file.filename, path.extname(file.filename))}.pcm"`)
-            reply.type('audio/pcm')
-            const pcm = await decode(inputBuffer, 24000)
-            reply.send(pcm.data)
+            const pcm = isSilk(inputBuffer) ? Buffer.from((await decode(inputBuffer, 48000)).data) : inputBuffer
+            const readable = Duplex.from(pcm)
+            const wav = await convertToWav(readable)
+            reply.header('Content-Disposition', `attachment; filename="${path.basename(file.filename, path.extname(file.filename))}.wav"`)
+            reply.type('audio/wav')
+            reply.send(wav)
         } catch (error) {
             console.log(error)
             reply.code(500).send({ error: error.message })
@@ -50,12 +52,14 @@ class MemoryWritableStream extends Writable {
 async function convertToWav(inputBuffer) {
     return new Promise((resolve, reject) => {
         const outputBuffer = new MemoryWritableStream()
-        ffmpeg()
-            .input(inputBuffer)
+
+        ffmpeg(inputBuffer)
+            .inputFormat('s16le')
             .audioCodec('pcm_s16le')
             .toFormat('wav')
             .on('end', () => resolve(outputBuffer.getData()))
             .on('error', (err) => reject(err))
             .pipe(outputBuffer, { end: true })
+
     })
 }
