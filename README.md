@@ -29,3 +29,6 @@ Puppeteer使用karin-screenshot库，基于puppeteer-core 22.10.0版本。
 - [×] 反向ws
 - [√] VUE
 
+## Silk
+用于将silk音频转为wav或将wav、pcm音频转为sikl
+
