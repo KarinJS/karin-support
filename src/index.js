@@ -7,6 +7,7 @@ import autoLoad from '@fastify/autoload'
 import middie from '@fastify/middie'
 import { Core } from 'karin-screenshot'
 import resources from './common/resources.js'
+import crypto from 'crypto'
 import path from 'path'
 import util from 'util'
 import fs from 'fs'
@@ -64,13 +65,6 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     const hash = request.headers['x-renderer-id'] || request.headers.referer?.match(/hash=([^&]+)/)?.[1] || request.headers.referer?.match(/hash=([^&]+)/)?.[1]
     if (!hash) return next()
     const url = request.originalUrl
-    // 读取缓存
-    const cachedResource = resources.cache.get(url)
-    if (cachedResource) {
-        res.setHeader('Content-Type', cachedResource.contentType)
-        res.end(cachedResource.data)
-        return next()
-    }
     // 如果是/favicon.ico 则返回本地
     if (url === '/favicon.ico') {
         const file = fs.readFileSync('./resources/favicon.ico')
@@ -81,7 +75,6 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     if (!file || !file.ws) return next()
     // 发送请求
     let data = resources.SendApi(file.ws, 'static', { file: url }, timeout)
-
     // 获取url后缀
     const ext = path.extname(url).toLowerCase()
     const mime = {
@@ -139,15 +132,17 @@ fastify.use(['/resources', '/plugins'], async (request, res, next) => {
     } catch {
         return next()
     }
+    const fileData = Buffer.from(data.file.data)
     // 缓存静态文件
-    resources.cache.set(url, {
+    resources.writeCache(url, {
         url,
         hash,
         contentType,
-        data: Buffer.from(data.file.data)
+        data: fileData,
+        md5: crypto.createHash('md5').update(fileData).digest('hex')
     })
     res.setHeader('Content-Type', contentType)
-    res.end(Buffer.from(data.file.data))
+    res.end(fileData)
     next()
 })
 

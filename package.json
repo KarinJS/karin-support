@@ -1,6 +1,6 @@
 {
   "name": "karin-support",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Support services for the Karin project",
   "main": "src/index.js",
   "type": "module",
@@ -26,6 +26,7 @@
     "node-cache": "^5.1.2",
     "silk-wasm": "^3.6.1",
     "ws": "^8.18.0",
-    "yaml": "^2.4.5"
+    "yaml": "^2.4.5",
+    "zlib": "^1.0.5"
   }
 }
