@@ -4,10 +4,13 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 
+const TTL = parseInt(process.env.CACHE_TTL) || 1440
+const MaxKey = parseInt(process.env.CACHE_MAXKEY) || 1000
+
 class Resources {
     constructor() {
         this.files = new Map();
-        this.cache = new NodeCache({ stdTTL: 60 * 60 * 24, maxKeys: 1000 });
+        this.cache = new NodeCache({ stdTTL: 60 * TTL, maxKeys: MaxKey });
         this.cacheDir = path.resolve(process.cwd(), 'resources');
 
         // 确保缓存目录存在
