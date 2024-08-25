@@ -1,65 +1,74 @@
-import { encode, decode, isSilk } from 'silk-wasm'
-import { Writable, Duplex } from 'stream'
 import path from 'path'
-import ffmpeg from 'fluent-ffmpeg'
+import AudioConverter from './AudioConverter.js';
 
 export default async (fastify, options) => {
-    fastify.post('/encode', async (request, reply) => {
+    const audioConverter = new AudioConverter();
+
+    fastify.post('/encode', {
+        schema: {
+            response: {
+                504: { type: 'string', description: 'Timeout error' }
+            },
+            config: {
+                timeout: 3 * 60 * 1000 // 2分钟超时
+            }
+        }
+    }, async (request, reply) => {
         const file = await request.file()
+        let silk, inputStream
         try {
-            const inputStream = file.file
-            reply.header('Content-Disposition', `attachment; filename="${path.basename(file.filename, path.extname(file.filename))}.silk"`)
+            const filename = `${path.basename(file.filename, path.extname(file.filename))}.silk`;
+            inputStream = file.file
+            reply.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
             reply.type('audio/silk')
-            const wav = await convertToWav(inputStream)
-            const silk = await encode(wav, 48000)
-            reply.send(silk.data)
+            silk = await audioConverter.convertToSilk(inputStream, 48000)
+            reply.send(silk)
         } catch (error) {
             console.log(error)
             reply.code(500).send({ error: error.message })
+        } finally {
+            // 清理缓存数据
+            if (silk) silk = null
+            if (inputStream) inputStream = null
         }
     })
-    fastify.post('/decode', async (request, reply) => {
+
+    fastify.post('/decode', {
+        schema: {
+            response: {
+                504: { type: 'string', description: 'Timeout error' }
+            },
+            config: {
+                timeout: 3 * 60 * 1000 // 2分钟超时
+            }
+        }
+    }, async (request, reply) => {
         const file = await request.file()
+        let wav, inputBuffer
         try {
-            const inputBuffer = await file.toBuffer()
-            const pcm = isSilk(inputBuffer) ? Buffer.from((await decode(inputBuffer, 48000)).data) : inputBuffer
-            const readable = Duplex.from(pcm)
-            const wav = await convertToWav(readable)
-            reply.header('Content-Disposition', `attachment; filename="${path.basename(file.filename, path.extname(file.filename))}.wav"`)
+            const filename = `${path.basename(file.filename, path.extname(file.filename))}.wav`;
+            inputBuffer = await file.toBuffer()
+            wav = await audioConverter.convertToWav(inputBuffer)
+            reply.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
             reply.type('audio/wav')
             reply.send(wav)
         } catch (error) {
             console.log(error)
             reply.code(500).send({ error: error.message })
+        } finally {
+            // 清理缓存数据
+            if (wav) wav = null
+            if (inputBuffer) inputBuffer = null
         }
     })
-}
 
-class MemoryWritableStream extends Writable {
-    constructor() {
-        super({ objectMode: true })
-        this.chunks = []
-    }
-    _write(chunk, encoding, callback) {
-        this.chunks.push(chunk)
-        callback()
-    }
-    getData() {
-        return Buffer.concat(this.chunks)
-    }
-}
-
-async function convertToWav(inputBuffer) {
-    return new Promise((resolve, reject) => {
-        const outputBuffer = new MemoryWritableStream()
-
-        ffmpeg(inputBuffer)
-            .inputFormat('s16le')
-            .audioCodec('pcm_s16le')
-            .toFormat('wav')
-            .on('end', () => resolve(outputBuffer.getData()))
-            .on('error', (err) => reject(err))
-            .pipe(outputBuffer, { end: true })
-
+    fastify.addHook('onTimeout', (request, reply, done) => {
+        // 在请求超时后执行清理操作
+        // 可以根据需求清理一些大型数据
+        // 示例: 清理某些与请求相关的变量
+        request.raw.silk = null
+        request.raw.wav = null
+        request.raw.inputStream = null
+        done()
     })
 }
