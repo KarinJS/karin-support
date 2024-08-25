@@ -11,6 +11,16 @@ export default async (fastify, options) => {
         let renderTimeout = null
         let maintain = false
 
+        // 发送协议
+        socket.send(JSON.stringify({
+            action: 'protocol', data: {
+                application: 'Karin-Support', // 应用名
+                short: true, // 支持短连接
+                cache: true, // 支持静态文件缓存
+                vue: true, // 支持vue
+            }
+        }))
+
         // Function to set or reset the render timeout
         const resetRenderTimeout = () => {
             if (maintain) return
